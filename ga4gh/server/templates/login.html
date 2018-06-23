@@ -33,14 +33,12 @@
             <div>
                 <img class="align-content" src="{{prepend_path}}static/logo.png" alt="">
                 <div class="login-form">
-                    <form>
-                        <div>
-                            <label>Username</label>
-                            <input type="username" class="form-control" placeholder="Username">
+                    <form action="{{ prepend_path}}login_oidc" method="post">
+                        <div style="padding-top:30px">
+                            <input type="text" name="username" class="form-control" placeholder="Username">
                         </div>
-                        <div>
-                            <label>Password</label>
-                            <input type="password" class="form-control" placeholder="Password">
+                        <div style="padding-top:30px">
+                            <input type="password" name="password" class="form-control" placeholder="Password">
                         </div>
                         <button type="submit" class="btn btn-success btn-flat">Sign in</button>
                     </form>
