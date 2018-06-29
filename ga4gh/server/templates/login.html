@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
-
-<head>
+<!-- This is hosted on Flask
+ -->
+ <head>
     <title>Login</title>
     <link rel=stylesheet type=text/css href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
     <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
@@ -33,7 +34,7 @@
             <div>
                 <img class="align-content" src="{{prepend_path}}static/logo.png" alt="">
                 <div class="login-form">
-                    <form action="{{ prepend_path}}login_oidc" method="post">
+                    <form action="{{ prepend_path}}login_oidc" method="post" autocomplete="on">
                         <div style="padding-top:30px">
                             <input type="text" name="username" class="form-control" placeholder="Username">
                         </div>

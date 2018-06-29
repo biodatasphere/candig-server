@@ -732,7 +732,7 @@ def handleException(exception):
                     protocol.toJson(error))
         if serverException.httpStatus == 401 \
                 or serverException.httpStatus == 403:
-            message += "Please try <a href=\"/login\">logging in</a>."
+            message += "Please try <a href=\"/login_oidc\">logging in</a>."
         return message
     else:
         # Errors aren't well defined enough to use protobuf, even if requested
@@ -919,81 +919,80 @@ class DisplayedRoute(object):
 @app.route('/', methods=LOGIN_ENDPOINT_METHODS)
 @requires_session
 def index():
-    return flask.render_template('spa.html', session_id=flask.session["id_token"],
-                                 prepend_path=app.config.get('TYK_LISTEN_PATH', ''))
+    return flask.render_template('spa.html', session_id=flask.session["id_token"]) #,prepend_path=app.config.get('TYK_LISTEN_PATH', '')
 
 @app.route('/login_oidc', methods=LOGIN_ENDPOINT_METHODS)
 def candig_login():
     redirect_url = flask.request.args.get('redirectUri', '')
+    print("this is the redirect url: " + redirect_url);
 
     # GET request: check if authenticated and redirect root page, otherwise render template
     if flask.request.method == "GET":
 
+        print("inside GET request")
+
         # check for valid session
         if "id_token" in flask.session:
-            introspectArgs = {
-                "token": flask.session["access_token"],
-                "client_id": oidc.client_secrets["client_id"],
-                "client_secret": oidc.client_secrets["client_secret"],
-                "refresh_token": flask.session["refresh_token"]
-            }
+            print("id_token found")
 
-            userInfo = requests.post(
-                url=oidc.client_secrets["token_introspection_uri"],
-                data=introspectArgs
-            )
+            # TODO: Introspect endpoint seems unavailable, and is commented out for now.
 
-            # session no longer valid
-            if userInfo.status_code != 200:
-                return gateway_logout()
+            # introspectArgs = {
+            #     "token": flask.session["access_token"],
+            #     "client_id": oidc.client_secrets["client_id"],
+            #     "client_secret": oidc.client_secrets["client_secret"],
+            #     "refresh_token": flask.session["refresh_token"]
+            # }
+
+            # userInfo = requests.post(
+            #     url=oidc.client_secrets["token_introspection_uri"],
+            #     data=introspectArgs
+            # )
+
+            # # session no longer valid
+            # if userInfo.status_code != 200:
+            #     return gateway_logout()
 
             # logged in, redirect to root
-            else:
-                return flask.redirect('http://ga4ghdev01.bcgsc.ca:8008/candig-local')
+            # else:
+            
+            print("logged in, redirect to root")
+            # TODO: The following redirect path is hardcoded, please change it. The original path would trigger a 
+            # "key not authorized" error for some reason, so I changed it to this.
+            return flask.redirect("http://ga4ghdev01.bcgsc.ca:8040") #.redirect(http://ga4ghdev01.bcgsc.ca:8008/candig-local/')
 
         # not logged in, render login page
         else:
+            print("not logged in, render login page")
             return flask.render_template('login.html',prepend_path=app.config.get('TYK_LISTEN_PATH', ''))
 
     # POST request: handle credentials and make call to keycloak
     elif flask.request.method == "POST":
-        password = request.form['password']
-        user = request.form['username']
-        flask.session["nonce"] = oic.oauth2.rndstr(SECRET_KEY_LENGTH)
 
-        body = {
-            "username": user,
-            "password": password,
-            "grant_type": "password",
-            "scope": "openid",
-            "nonce": flask.session["nonce"],
-            "client_id": oidc.client_secrets["client_id"],
-            "client_secret": oidc.client_secrets["client_secret"]
-        }
+        # Avoid using request.form[key] whenever possible, as it will cause the server to fail if the key is not found
+        # Use request.form.get(key) instead, which returns none instead of crashing the server
 
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded"
-        }
+        print("inside POST request");
 
-        token_response = requests.post(
-            url=oidc.client_secrets["token_uri"],
-            data=body,
-            headers=headers
-        )
+        # If the authorization header contains the valid token
+        if  flask.request.headers["Authorization"] != "Not valid":
+            token = flask.request.headers["Authorization"][7:]
 
-        if token_response.status_code == 200:
-            token_content = json.loads(token_response.content)
+            body = flask.request.get_data()
+            parsedBody = json.loads(body)
 
-            flask.session["access_token"] = token_content["access_token"]
-            flask.session["id_token"] = token_content["id_token"]
-            flask.session["refresh_token"] = token_content["refresh_token"]
+            flask.session["access_token"] = parsedBody["access_token"]
+            flask.session["id_token"] = parsedBody["id_token"]
+            flask.session["refresh_token"] = parsedBody["refresh_token"]
 
             response = flask.redirect(redirect_url)
-            response.headers.add("Set-Cookie", "session_id={0}; HttpOnly".format(flask.session["id_token"]))
+            # TODO: the following line triggers an exception, and is commented out for now.
+            #response.headers.add("Set-Cookie", "session_id={0}; HttpOnly".format(flask.session["id_token"]))
 
         else:
-            response = flask.redirect('http://ga4ghdev01.bcgsc.ca:8008/candig-local/login_oidc')
-
+            print(flask.request.headers["Authorization"])
+            print(flask.request.get_data())
+            response = flask.redirect(redirect_url)
 
         return response
 
@@ -1095,9 +1094,10 @@ def gateway_logout():
     :return: redirect to the gateway proxy page
     """
 
-    response = flask.redirect('/login_oidc')
+    response = flask.redirect('/')
 
     try:
+        print("inside gateway logout")
         _close_session()
         response.delete_cookie('session_id')
 
@@ -1112,6 +1112,7 @@ def _close_session():
     helper method for terminating both a keycloak+flask session
 
     """
+    print("inside close session")
     url = oidc.client_secrets["logout_endpoint"]
     auth_bearer = 'Bearer ' + flask.session["access_token"]
 
@@ -1126,8 +1127,13 @@ def _close_session():
         'Content-Type': 'application/x-www-form-urlencoded',
     }
 
-    requests.post(url, data=payload, headers=headers)
+    print("making close session request")
+
+    # TODO: The following post request triggers an exception, and is commented out for now.
+    #requests.post(url, data=payload, headers=headers)
     flask.session.clear()
+
+    print("flask session cleared")
 
 
 @DisplayedRoute('/token', postMethod=True)
@@ -1322,6 +1328,7 @@ def searchVariantAnnotations():
 @DisplayedRoute('/datasets/search', postMethod=True)
 @requires_auth
 def searchDatasets():
+    print("inside search dataset")
     return handleFlaskPostRequest(
         flask.request, app.backend.runSearchDatasets)
 
