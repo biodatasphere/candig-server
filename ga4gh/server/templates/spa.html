@@ -11,7 +11,7 @@
       <link rel=stylesheet type=text/css href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
       <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
       <script type="text/javascript" src="https://igv.org/web/release/2.0.0-beta3/dist/igv.min.js"></script>
-      <link type="text/css" rel="stylesheet" href="{{prepend_path}}static/dashboard.css">
+      <link type="text/css" rel="stylesheet" href="{{prepend_path}}/static/dashboard.css">
    </head>
    <!-- A grey horizontal navbar that becomes vertical on small screens -->
    <nav class="navbar navbar-expand-sm bg-light">
@@ -27,10 +27,10 @@
             <a class="nav-link" data-toggle="tab" href="#candig_patients">Patient overview</a>
          </li>
          <li>
-            <a class="nav-link" href="{{prepend_path}}logout_oidc">Log out</a>
+            <a class="nav-link" href="{{ prepend_path }}/logout_oidc">Log out</a>
          </li>
          <!--          A workaround to refresh the current tab, do not delete this tab with #refreshTab
-            -->         
+            -->
          <li>
             <a class="nav-link" data-toggle="tab" href="#refreshTab" style="display: none">refreshTab</a>
          </li>
@@ -138,12 +138,12 @@
       let finalDatasetName;
       let finalDatasetId;
       let activeTab;
-      
+
       /*Retrieve a list of datasets and initialize the page*/
-      
+
       $(window).load(function () {
           var xhr = new XMLHttpRequest();
-          xhr.open("POST", "{{prepend_path}}datasets/search", true);
+          xhr.open("POST", "{{ prepend_path }}/datasets/search", true);
           xhr.setRequestHeader('Content-Type', 'application/json');
           xhr.setRequestHeader('Accept', 'application/json');
           xhr.setRequestHeader('Authorization', 'Bearer '+'{{ session_id }}');
@@ -167,32 +167,32 @@
                   if (listOfDatasetId.length == 0) {
                     $('warningMsg').html("Sorry, but it seems like no data is available at the moment..")
                   }
-          
+
                   else {
                     finalDatasetName = [];
                     finalDatasetId = [];
                     let dropdown = document.getElementById("dropdown-menu");
-          
+
                     for (let i = 0; i < listOfDatasetId.length; i++) {
                         if (!finalDatasetId.includes(listOfDatasetId[i]['id'])){
                             finalDatasetId.push(listOfDatasetId[i]['id']);
                             finalDatasetName.push(listOfDatasetId[i]['name']);
                         }
                     }
-          
+
                     for (let j = 0; j < finalDatasetId.length; j++) {
                         dropdown.innerHTML += '<a class="dropdown-item" id="refresh" href="javascript:void(0)" onclick="refreshDataset('+ j + ')">' + finalDatasetName[j] + '</a>'
                     }
-          
+
                     datasetId = finalDatasetId[0];
                     $('#dropdownMenuLink').html("Dataset: " + finalDatasetName[0]);
 
-                    $('.nav-tabs a[href="#candig"]').tab('show');               
+                    $('.nav-tabs a[href="#candig"]').tab('show');
                   }
               }
           }
       });
-      
+
       function refreshDataset(datasetIndex) {
           datasetId = finalDatasetId[datasetIndex];
           let currTab = activeTab.href.split('#')[1];
@@ -200,44 +200,43 @@
           $('#topTabs a[href="#' + currTab + '"]').tab('show');
           $('#dropdownMenuLink').html("Dataset: " + finalDatasetName[datasetIndex]);
       }
-      
+
       $("a[href='#gene_search']").on('shown.bs.tab', function (e) {
           activeTab = e.target;
 
-        // If the dataTable is not initialized, statusCode == -1 meaning that the previous response was invalid
-        if (document.getElementById('myTable').innerHTML != "" && statusCode != -1){
+        if (document.getElementById('myTable').innerHTML != ""){
               var table = $("#myTable").DataTable();
               table.destroy();
               document.getElementById("myTable").innerHTML = "";
-              statusCode = 0;       
+              statusCode = 0;
         }
 
-        // if (document.getElementById('mytable').innerHTML != ""){
-        //       var table = $("#mytable").DataTable();
-        //       table.destroy();
-        //       document.getElementById("mytable").innerHTML = "";          
-        // }
+        if (document.getElementById('mytable').innerHTML != ""){
+              var table = $("#mytable").DataTable();
+              table.destroy();
+              document.getElementById("mytable").innerHTML = "";
+        }
 
-        // if (document.getElementById('patientTable').innerHTML != ""){
-        //       var table = $("#patientTable").DataTable();
-        //       table.destroy();
-        //       document.getElementById("patientTable").innerHTML = "";          
-        // }
+        if (document.getElementById('patientTable').innerHTML != ""){
+              var table = $("#patientTable").DataTable();
+              table.destroy();
+              document.getElementById("patientTable").innerHTML = "";
+        }
 
       })
-      
-      
+
+
       $("a[href='#candig']").on('shown.bs.tab', function (e) {
-      
+
       activeTab = e.target;
       var treatments;
       var objectDrugList = [];
       var drugList = Array(18).join(".").split("."); //Initialize an emptry string array that has 18 empty strings.
-      
+
       //var datasetId = '{{ datasetId }}';
-      
+
       var xhr = new XMLHttpRequest();
-      xhr.open("POST", "{{prepend_path}}treatments/search", true);
+      xhr.open("POST", "{{ prepend_path }}/treatments/search", true);
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.setRequestHeader('Accept', 'application/json');
       xhr.setRequestHeader('Authorization', 'Bearer '+'{{ session_id }}');
@@ -251,16 +250,16 @@
           var success = data['status']['Successful communications'];
           var queryStatusSeriesArray = highChartSeriesObjectMaker(["Known Peers", "Queried Peers", "Successful Communications"], [knownPeers, queriedPeers, success]);
           singleLayerDrawer("queryStatus", 'bar', 'Server status', queryStatusSeriesArray);
-      
-      
+
+
           samplesFetcher();
-      
+
           cancerTypeDruglistFetcher();
           treatments = data['results'][0]['treatments'];
           treatmentsFetcher(treatments);
-      
+
       }
-      
+
       function highChartSeriesObjectMaker(nameArray, dataArray){
         var tempObj = {};
         var seriesObjList = [];
@@ -275,53 +274,53 @@
             }
             return seriesObjList;
       }
-      
+
       function freqCounter(arrayToCount){
           result = {};
-      
+
           for (var j = 0; j < arrayToCount.length; j++) {
               if (!result[arrayToCount[j]]) {
                   result[arrayToCount[j]] = 0;
               }
               ++result[arrayToCount[j]];
           }
-      
+
           return result;
       }
-      
-      
+
+
       function treatmentsFetcher(treatments){
-      
+
           var responseArray = [];
           var therapeuticArray = [];
-      
+
           for (var i = 0; i < treatments.length; i++) {
 
             if (treatments[i]['responseToTreatment'] != undefined){
-                responseArray.push(treatments[i]['responseToTreatment']);          
+                responseArray.push(treatments[i]['responseToTreatment']);
             }
 
             if (treatments[i]['therapeuticModality'] != undefined){
-                therapeuticArray.push(treatments[i]['therapeuticModality']);    
+                therapeuticArray.push(treatments[i]['therapeuticModality']);
             }
           }
-      
+
           var tempCats = Object.keys(freqCounter(responseArray));
           var tempVals = Object.values(freqCounter(responseArray));
-      
+
           var theraCats = Object.keys(freqCounter(therapeuticArray));
           var theraVals = Object.values(freqCounter(therapeuticArray));
-      
+
           var treatmentsSeriesArray = highChartSeriesObjectMaker(tempCats, tempVals);
           singleLayerDrawer("responseToTreatment", 'bar', 'Response to treatments', treatmentsSeriesArray);
-      
+
           var therapeuticSeriesArray = highChartSeriesObjectMaker(theraCats, theraVals);
-          singleLayerDrawer("therapeuticToResponses", 'bar', 'Therapeutic Types', therapeuticSeriesArray);              
+          singleLayerDrawer("therapeuticToResponses", 'bar', 'Therapeutic Types', therapeuticSeriesArray);
         }
-       
+
       function samplesFetcher() {
           var xhr = new XMLHttpRequest();
-          xhr.open("POST", "{{prepend_path}}samples/search", true);
+          xhr.open("POST", "{{ prepend_path }}/samples/search", true);
           xhr.setRequestHeader('Content-Type', 'application/json');
           xhr.setRequestHeader('Accept', 'application/json');
           xhr.setRequestHeader('Authorization', 'Bearer '+'{{ session_id }}');
@@ -330,19 +329,19 @@
           }));
           xhr.onload = function() {
               var data = JSON.parse(this.responseText);
-      
+
               var sampleDataset = data['results'][0]['samples'];
               var tempArray = [];
               var tempDateArray = [];
               var tempObj;
               var misCount;
-      
+
               for (var i = 0; i < sampleDataset.length; i++) {
 
-                if (sampleDataset[i]['collectionHospital']){                  
+                if (sampleDataset[i]['collectionHospital']){
                   tempArray.push(sampleDataset[i]['collectionHospital']);
                   var tempDate = sampleDataset[i]['collectionDate'];
-      
+
                   try {
                       var newDate = tempDate.substr(tempDate.length - 4);
                       tempDateArray.push(newDate);
@@ -350,38 +349,38 @@
                       misCount++;
                   }
                 }
-    
+
               }
-      
+
               tempObj = freqCounter(tempArray);
               var listOfHospitals = Object.keys(result);
               var listOfHospitalNumber = Object.values(result);
-      
+
               var tempIndex = listOfHospitals.indexOf("undefined");
               if (tempIndex !== -1) {listOfHospitals[tempIndex] = 'Other'};
-      
-      
+
+
               var hospitalNewArray = highChartSeriesObjectMaker(listOfHospitals, listOfHospitalNumber);
               hospitalNewArray.sort(function (a, b) {return b.y - a.y});
               singleLayerDrawer("hospitals", 'bar', 'Hospital distribution', hospitalNewArray);
-      
-      
+
+
               var years = Object.keys(freqCounter(tempDateArray));
               var yearsCount = Object.values(freqCounter(tempDateArray));
-      
+
               var cumulativeYearCounts = [0];
-      
+
               yearsCount.forEach(function(elementToAdd, index) {
                   var newElement = cumulativeYearCounts[index] + elementToAdd;
                   cumulativeYearCounts.push(newElement);
               });
               cumulativeYearCounts.shift();
-      
+
               timelineDrawer(yearsCount, years, cumulativeYearCounts);
-      
+
           }
       }
-      
+
           // This function calculates the cumulative sum over the years
           function timelineDrawer(yearsCount, years, cumulativeData) {
               Highcharts.chart('timelineSamples', {
@@ -437,7 +436,7 @@
                   }]
               });
           }
-      
+
       // may be used in future
       // function responseTypeCalc(responseArray, treatment) {
       //     if (treatment['responseToTreatment'] == "Complete Response") {
@@ -452,8 +451,8 @@
       //         responseArray[4]++;
       //     }
       // }
-      
-      
+
+
       function drillDownDrawer(elementId, titleText, seriesName, seriesList, drillDownList) {
           Highcharts.chart(elementId, {
               chart: {
@@ -468,11 +467,11 @@
               xAxis: {
                   type: 'category'
               },
-      
+
               legend: {
                   enabled: false
               },
-      
+
               plotOptions: {
                   series: {
                       borderWidth: 0,
@@ -481,7 +480,7 @@
                       }
                   }
               },
-      
+
               series: [{
                   type: 'pie',
                   name: seriesName,
@@ -499,10 +498,10 @@
               }
           });
       }
-      
+
       function cancerTypeDruglistFetcher() {
           var xhr = new XMLHttpRequest();
-          xhr.open("POST", "{{prepend_path}}diagnoses/search", true);
+          xhr.open("POST", "{{ prepend_path }}/diagnoses/search", true);
           xhr.setRequestHeader('Content-Type', 'application/json');
           xhr.setRequestHeader('Accept', 'application/json');
           xhr.setRequestHeader('Authorization', 'Bearer '+'{{ session_id }}');
@@ -518,23 +517,23 @@
               var drillDownList = [];
               var drillDownObj = {};
               var tempCancerList = [];
-      
+
               for (var i = 0; i < diagnosesDatasets.length; i++){
                 if (diagnosesDatasets[i]['cancerType'] != undefined){
                   tempCancerList.push(diagnosesDatasets[i]['cancerType']);
                 }
               }
-      
+
               var tempCancerObj = freqCounter(tempCancerList);
               var cancerTypesList = Object.keys(tempCancerObj);
               var cancerTypeFreq = Object.values(tempCancerObj);
-      
+
               for (var i = 0; i < diagnosesDatasets.length; i++){
                   var currCancer = diagnosesDatasets[i]['cancerType'];
                   drugList[cancerTypesList.indexOf(currCancer)] += treatments[i]['drugListOrAgent'];
                   //cancerTypeFreq[cancerTypesList.indexOf(currCancer)]++;
               }
-      
+
               for (var i = 0; i < cancerTypesList.length; i++){
                   seriesObj = {};
                   seriesObj['name'] = cancerTypesList[i];
@@ -542,35 +541,35 @@
                   seriesObj['drilldown'] = cancerTypesList[i];
                   seriesList.push(seriesObj);
               }
-        
+
               for (var j = 0; j < drugList.length; j++){
                   drugList[j] = drugList[j].split(", ");
-      
+
                   result = {};
-                  for (var k = 0; k < drugList[j].length; k++){   
+                  for (var k = 0; k < drugList[j].length; k++){
                       if (!result[drugList[j][k]])
                           result[drugList[j][k]] = 0;
                       ++result[drugList[j][k]];
                   }
                   objectDrugList.push(result);
               }
-      
+
               for (var i = 0; i < objectDrugList.length; i++){
                   drillDownObj = {};
                   var tempData = Object.keys(objectDrugList[i]).map(function(key) {
                       return [String(key), objectDrugList[i][key]];
                   });
-      
+
                   drillDownObj['id'] = cancerTypesList[i];
                   drillDownObj['data'] = tempData;
                   drillDownList.push(drillDownObj);
               }
-      
+
               drillDownDrawer('cancerTypes', "cancer types and corresponding treatment drugs", 'cancer types', seriesList, drillDownList);
-      
+
           }
       }
-      
+
         function singleLayerDrawer(id, type, title, seriesArray){
               Highcharts.chart(id, {
                   chart: {
@@ -604,43 +603,43 @@
               });
               //Highcharts.setOptions(theme);
           }
-      
+
           //TODO: Get rid of function therapeuticTypeDrawer
       });
-      
-      
-            
+
+
+
       $("a[href='#candig_patients']").on('shown.bs.tab', function (e) {
 
       var patientStatusCode = 0;
       activeTab = e.target;
       patient_main();
-      
+
       function patient_main(){
         if (document.getElementById('mytable').innerHTML != ""){
               var table = $("#mytable").DataTable();
               table.destroy();
-              document.getElementById("mytable").innerHTML = "";          
+              document.getElementById("mytable").innerHTML = "";
         }
 
         if (document.getElementById('patientTable').innerHTML != ""){
               var table = $("#patientTable").DataTable();
               table.destroy();
-              document.getElementById("patientTable").innerHTML = "";          
+              document.getElementById("patientTable").innerHTML = "";
         }
 
-        // if (document.getElementById('myTable').innerHTML != ""){
-        //       var table = $("#myTable").DataTable();
-        //       table.destroy();
-        //       document.getElementById("myTable").innerHTML = "";          
-        // }
-      
-      
+        if (document.getElementById('myTable').innerHTML != ""){
+              var table = $("#myTable").DataTable();
+              table.destroy();
+              document.getElementById("myTable").innerHTML = "";
+        }
+
+
       var listOfRace = [];
       var listOfProvinces = [];
       var listOfGenders = [];
       var xhr = new XMLHttpRequest();
-      xhr.open("POST", "{{prepend_path}}patients/search", true);
+      xhr.open("POST", "{{ prepend_path }}/patients/search", true);
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.setRequestHeader('Accept', 'application/json');
       xhr.setRequestHeader('Authorization', 'Bearer '+'{{ session_id }}');
@@ -649,22 +648,22 @@
       }));
       xhr.onload = function() {
           var data = JSON.parse(this.responseText);
-      
+
           var patientsDataset = data['results'][0]['patients'];
-      
+
           var tbl = $('<table/>').attr("id", "mytable");
-      
+
           var th = '<thead><tr><th scope="col">Patient ID</th><th scope="col">Gender</th><th scope="col">Date of Death</th><th scope="col">Province of Residence</th> <th scope="col">Date of Birth</th><th scope="col">Race</th><th scope="col">OEE</th></tr></thead><tbody>';
-      
+
           $("#mytable").append(th);
-      
+
           for (var i = 0; i < patientsDataset.length; i++) {
 
             if (patientsDataset[i]["race"] != undefined && patientsDataset[i]["provinceOfResidence"] != undefined && patientsDataset[i]["gender"] != undefined){
                 listOfRace.push(patientsDataset[i]["race"]);
                 listOfProvinces.push(patientsDataset[i]["provinceOfResidence"]);
                 listOfGenders.push(patientsDataset[i]["gender"]);
-        
+
                 var tr = "<tr>";
                 var td0 = '<td scope="col">' + patientsDataset[i]["patientId"] + "</td>";
                 var tdGender = '<td scope="col">' + patientsDataset[i]["gender"] + "</td>";
@@ -674,17 +673,17 @@
                 var td4 = '<td scope="col">' + patientsDataset[i]["race"] + "</td>";
                 var td5 = '<td scope="col">' + patientsDataset[i]["occupationalOrEnvironmentalExposure"] + "</td>";
                 var td6 = "</tr>";
-        
-                $("#mytable").append(tr + td0 + tdGender + td1 + td2 + td3 + td4 + td5 + td6);              
+
+                $("#mytable").append(tr + td0 + tdGender + td1 + td2 + td3 + td4 + td5 + td6);
               }
           }
-      
+
           categoriesDrawer("raceGraph", "Ethnic Groups", listOfRace);
           categoriesDrawer("provinceGraph", "Provinces", listOfProvinces);
           categoriesDrawer("genderGraph", "Genders", listOfGenders);
-      
+
           $("#mytable").append('</tbody><tfoot><tr><th scope="col">Patient ID</th><th scope="col">Gender</th><th scope="col">Date of Death</th><th scope="col">Province of Residence</th> <th scope="col">Date of Birth</th><th scope="col">Race</th><th scope="col">OEE</th></tr></tfoot>');
-      
+
           $(document).ready(function() {
               $('#mytable').DataTable({
                   initComplete: function () {
@@ -696,12 +695,12 @@
                                   var val = $.fn.dataTable.util.escapeRegex(
                                       $(this).val()
                                   );
-           
+
                                   column
                                       .search( val ? '^'+val+'$' : '', true, false )
                                       .draw();
                               } );
-           
+
                           column.data().unique().sort().each( function ( d, j ) {
                               select.append( '<option value="'+d+'">'+d+'</option>' )
                           } );
@@ -709,18 +708,18 @@
                   }
               });
           });
-      
+
           $('#mytable tbody').on('click', 'tr', function () {
               var table = $("#mytable").DataTable();
               var tempData = table.row( this ).data()[0];
               patientInfoFetcher(tempData);
           });
-      
+
       }
-      
+
         }
-      
-      
+
+
       function highChartSeriesObjectMaker(nameArray, dataArray){
         var tempObj = {};
         var seriesObjList = [];
@@ -735,14 +734,14 @@
             }
             return seriesObjList;
       }
-      
+
       function categoriesDrawer(elementId, titleText, arrayToDraw) {
           var tempCats = Object.keys(categoriesCounter(arrayToDraw));
           var tempVals = Object.values(categoriesCounter(arrayToDraw));
           var tempObjList = highChartSeriesObjectMaker(tempCats, tempVals);
           drillDownDrawer(elementId, titleText, tempCats, "", tempObjList, []);
       }
-      
+
       function categoriesCounter(arrayToCount) {
           var result = {};
           for (var j = 0; j < arrayToCount.length; j++) {
@@ -753,7 +752,7 @@
           }
           return result;
       }
-      
+
       function drillDownDrawer(elementId, titleText, categories, seriesName, seriesList, drillDownList) {
         var lastSearch = "";
           Highcharts.chart(elementId, {
@@ -769,11 +768,11 @@
               xAxis: {
                   categories: categories
               },
-      
+
               legend: {
                   enabled: false
               },
-      
+
               plotOptions: {
                   pie: {
                       allowPointSelect: true,
@@ -797,7 +796,7 @@
                       }
                   }
               },
-      
+
               series: [{
                   // type: 'pie',
                   name: seriesName,
@@ -809,21 +808,21 @@
               }
           });
       }
-      
+
       function patientInfoFetcher(patientId) {
-      
+
           if (patientStatusCode == 1) {
               var table = $("#patientTable").DataTable();
               table.destroy();
               document.getElementById("patientTable").innerHTML = "";
           }
-      
+
           var xhr = new XMLHttpRequest();
-      
-              xhr.open("POST", "{{prepend_path}}samples/search", true);
+
+              xhr.open("POST", "{{ prepend_path }}/samples/search", true);
               xhr.setRequestHeader('Content-Type', 'application/json');
               xhr.setRequestHeader('Accept', 'application/json');
-              xhr.setRequestHeader('Authorization', 'Bearer '+'{{ session_id }}');              
+              xhr.setRequestHeader('Authorization', 'Bearer '+'{{ session_id }}');
               xhr.send(JSON.stringify({
                   'datasetId': datasetId,
                   'patientId': patientId
@@ -831,7 +830,7 @@
               xhr.onload = function() {
                   var data = JSON.parse(this.responseText);
                   var sampleDataset = data['results'][0]['samples'];
-      
+
                   xhr.open("POST", "treatments/search", true);
                   xhr.setRequestHeader('Content-Type', 'application/json');
                   xhr.setRequestHeader('Accept', 'application/json');
@@ -843,46 +842,46 @@
                   xhr.onload = function() {
                       var tempRes = JSON.parse(this.responseText);
                       var treatmentDataset = tempRes['results'][0]['treatments'];
-      
+
                       var tbl = $('<table/>').attr("id", "patientTable");
                       var th = '<thead><tr><th scope="col">Patient ID</th><th scope="col">Collection Hospital</th><th scope="col">Collection Date</th><th scope="col">Cancer Type</th><th scope="col">Response to treatment</th><th scope="col">Drug list</th><th scope="col">Therapeutic Modality </th></tr></thead><tbody>';
-                      
+
                       $("#patientTable").append(th);
-      
+
                       for (var i = 0; i < sampleDataset.length; i++) {
-      
+
                           var tr = "<tr>";
                           var td0 = '<td scope="col">' + sampleDataset[i]["patientId"] + "</td>";
                           var td1 = '<td scope="col">' + sampleDataset[i]["collectionHospital"] + "</td>";
                           var td2 = '<td scope="col">' + sampleDataset[i]["collectionDate"] + "</td>";
                           var td7 = '<td scope="col">' + sampleDataset[i]["cancerType"] + "</td>";
-      
+
                           var td3 = '<td scope="col">' + treatmentDataset[i]["responseToTreatment"] + "</td>";
                           var td4 = '<td scope="col">' + treatmentDataset[i]["drugListOrAgent"] + "</td>";
                           var td5 = '<td scope="col">' + treatmentDataset[i]["therapeuticModality"] + "</td>";
                           var td6 = "</tr>";
-      
-                          $("#patientTable").append(tr + td0 + td1 + td2 + td7 + td3 + td4 + td5 + td6);                
+
+                          $("#patientTable").append(tr + td0 + td1 + td2 + td7 + td3 + td4 + td5 + td6);
                       }
-      
+
                       $("#patientTable").append('</tbody>')
-      
+
                       $(document).ready(function() {
                           $("#patientTable").DataTable();
                           patientStatusCode = 1;
                       });
-      
+
                   }
               }
-      
-      }       
+
+      }
       });
-      
-      
+
+
       var statusCode = 0; // Initial value, table is empty
-      
+
       function submit() {
-      
+
         if (statusCode == 1) {
             if (document.getElementById('myTable').innerHTML != ""){
                 var table = $('#myTable').DataTable();
@@ -890,13 +889,13 @@
                 document.getElementById('myTable').innerHTML = "";
               }
         }
-      
+
         document.getElementById("loader").style.display = "block";
         document.getElementById("myTable").innerHTML = "";
         var geneRequest = document.getElementById("request").value;
-      
+
         var xhr = new XMLHttpRequest();
-        xhr.open("POST", "{{prepend_path}}variantsbygenesearch", true);
+        xhr.open("POST", "{{ prepend_path }}/variantsbygenesearch", true);
         xhr.setRequestHeader('Content-Type', 'application/json');
         xhr.setRequestHeader('Accept', 'application/json');
         xhr.setRequestHeader('Authorization', 'Bearer '+'{{ session_id }}');
@@ -910,11 +909,9 @@
                 var geneDataset = data['results'][0];
                 tableMaker(geneDataset);
                 igvSearch(geneRequest);
-                document.getElementById("igvSample").style.display = "block";
                 statusCode = 1; // The Dataset was created successfully
             } else {
                 document.getElementById("loader").style.display = "none";
-                document.getElementById("igvSample").style.display = "none";                
                 document.getElementById("myTable").innerHTML = "Sorry, but we are not able to locate the gene.";
                 statusCode = -1; //The dataset failed to initialized.
             }

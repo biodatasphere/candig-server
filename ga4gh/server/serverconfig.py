@@ -183,11 +183,12 @@ class TykConfig(KeycloakOidConfig):
     """
     Configuration to use when forwarding requests through the API gateway.
     This also requires that keycloak config is being used and is set up properly.
-    Still testing this config out
+    Still testing this config out. Some fields will be removed still
     """
     TYK_ENABLED = True
     TYK_SERVER = 'ga4ghdev01.bcgsc.ca:8008'
-    TYK_LISTEN_PATH = '/candig-local/'
+    TYK_LISTEN_PATH = '/candig-local'
+    TYK_BASE_URL = 'http://ga4ghdev01.bcgsc.ca:8008/candig-local'
     KC_SERVER = 'ga4ghdev01:8080'
     KC_SCOPE = 'openid+email'
     KC_RTYPE = 'code'

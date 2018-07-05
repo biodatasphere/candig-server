@@ -792,12 +792,22 @@ def requires_session(f):
     @functools.wraps(f)
     def decorated(*args, **kargs):
         if app.config.get("TYK_ENABLED"):
+            tyk_path = app.config['TYK_BASE_URL']
 
-            #TODO: check nonce claim to prevent CSRF
-            if "id_token" not in flask.session:
-                current_uri = flask.request.url
-                redirect_uri = 'http://ga4ghdev01.bcgsc.ca:8008/candig-local/login_oidc?redirectUri='+current_uri
+            #TODO: CSRF check
+            userInfo = _check_session()
+
+            if not userInfo:
+                #redirect_path = tyk_path+flask.request.path
+                #redirect_uri = tyk_path+'/login_oidc?redirectUri='+redirect_path
+                redirect_uri = tyk_path+'/login_oidc'
                 return flask.redirect(redirect_uri)
+
+            else:
+                userInfo_content = json.loads(userInfo.content)
+                print(userInfo_content)
+                if not userInfo_content.get('active'):
+                    return gateway_logout()
 
         return f(*args, **kargs)
     return decorated
@@ -916,85 +926,92 @@ class DisplayedRoute(object):
         return wrapper
 
 
-@app.route('/', methods=LOGIN_ENDPOINT_METHODS)
+@app.route('/')
 @requires_session
 def index():
-    return flask.render_template('spa.html', session_id=flask.session["id_token"]) #,prepend_path=app.config.get('TYK_LISTEN_PATH', '')
+    return flask.render_template('spa.html', session_id=flask.session["id_token"],
+                                 prepend_path=app.config.get('TYK_LISTEN_PATH', ''))
 
 @app.route('/login_oidc', methods=LOGIN_ENDPOINT_METHODS)
 def candig_login():
-    redirect_url = flask.request.args.get('redirectUri', '')
-    print("this is the redirect url: " + redirect_url);
+    '''
+    this method currently assumes that a TYK api gateway is being used as per CanDIG architecture and starts a browser
+    session using an httponly cookie with a path equivalent to the gateway path
+    TODO: use secure cookie/connection
+    TODO: redirect when not using SPA
+    '''
+
+    #redirect_url = flask.request.args.get('redirectUri', '')
+    base_url = app.config['TYK_BASE_URL']
 
     # GET request: check if authenticated and redirect root page, otherwise render template
     if flask.request.method == "GET":
 
-        print("inside GET request")
-
         # check for valid session
-        if "id_token" in flask.session:
-            print("id_token found")
+        userInfo = _check_session()
 
-            # TODO: Introspect endpoint seems unavailable, and is commented out for now.
+        if userInfo:
+            userInfo_content = json.loads(userInfo.content)
 
-            # introspectArgs = {
-            #     "token": flask.session["access_token"],
-            #     "client_id": oidc.client_secrets["client_id"],
-            #     "client_secret": oidc.client_secrets["client_secret"],
-            #     "refresh_token": flask.session["refresh_token"]
-            # }
-
-            # userInfo = requests.post(
-            #     url=oidc.client_secrets["token_introspection_uri"],
-            #     data=introspectArgs
-            # )
-
-            # # session no longer valid
-            # if userInfo.status_code != 200:
-            #     return gateway_logout()
+            # error checking session
+            if userInfo.status_code != 200 or not userInfo_content.get('active'):
+                return gateway_logout()
 
             # logged in, redirect to root
-            # else:
-            
-            print("logged in, redirect to root")
-            # TODO: The following redirect path is hardcoded, please change it. The original path would trigger a 
-            # "key not authorized" error for some reason, so I changed it to this.
-            return flask.redirect("http://ga4ghdev01.bcgsc.ca:8040") #.redirect(http://ga4ghdev01.bcgsc.ca:8008/candig-local/')
+            else:
+                return flask.redirect(base_url)
 
         # not logged in, render login page
         else:
-            print("not logged in, render login page")
             return flask.render_template('login.html',prepend_path=app.config.get('TYK_LISTEN_PATH', ''))
 
     # POST request: handle credentials and make call to keycloak
     elif flask.request.method == "POST":
 
-        # Avoid using request.form[key] whenever possible, as it will cause the server to fail if the key is not found
-        # Use request.form.get(key) instead, which returns none instead of crashing the server
+        password = request.form.get('password')
+        user = request.form.get('username')
+        flask.session["nonce"] = oic.oauth2.rndstr(SECRET_KEY_LENGTH)
+        flask.session["session_state"] = oic.oauth2.rndstr(SECRET_KEY_LENGTH)
 
-        print("inside POST request");
+        body = {
+            "username": user,
+            "password": password,
+            "grant_type": "password",
+            "scope": "openid",
+            "nonce": flask.session["nonce"],
+            "session_state": flask.session["session_state"],
+            "client_id": oidc.client_secrets["client_id"],
+            "client_secret": oidc.client_secrets["client_secret"]
+        }
 
-        # If the authorization header contains the valid token
-        if  flask.request.headers["Authorization"] != "Not valid":
-            token = flask.request.headers["Authorization"][7:]
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
 
-            body = flask.request.get_data()
-            parsedBody = json.loads(body)
+        token_response = requests.post(
+            url=oidc.client_secrets["token_uri"],
+            data=body,
+            headers=headers
+        )
 
-            flask.session["access_token"] = parsedBody["access_token"]
-            flask.session["id_token"] = parsedBody["id_token"]
-            flask.session["refresh_token"] = parsedBody["refresh_token"]
+        if token_response.status_code == 200:
+            token_content = json.loads(token_response.content)
+            print(token_content)
 
-            response = flask.redirect(redirect_url)
-            # TODO: the following line triggers an exception, and is commented out for now.
-            #response.headers.add("Set-Cookie", "session_id={0}; HttpOnly".format(flask.session["id_token"]))
+            flask.session["access_token"] = token_content["access_token"]
+            flask.session["id_token"] = token_content["id_token"]
+            flask.session["refresh_token"] = token_content["refresh_token"]
+
+            response = flask.redirect(base_url)
+            response.set_cookie('session_id', flask.session["id_token"], max_age=600, path=app.config.get('TYK_LISTEN_PATH', ''), httponly=True)
+            return response
 
         else:
-            print(flask.request.headers["Authorization"])
-            print(flask.request.get_data())
-            response = flask.redirect(redirect_url)
-
-        return response
+            # login error: render page w/ error message
+            error_message = json.loads(token_response.content).get("error_description")
+            return flask.render_template('login.html',
+                                         prepend_path=app.config.get('TYK_LISTEN_PATH', ''),
+                                         error=error_message)
 
     # Exception
     else:
@@ -1004,13 +1021,13 @@ def candig_login():
 ### ======================================================================= ###
 ### FRONT END
 ### ======================================================================= ###
-@app.route('/candig', methods=LOGIN_ENDPOINT_METHODS)
+@app.route('/candig')
 @requires_session
 def candig():
     datasetId = "WyJNRVRBREFUQSJd"
     return flask.render_template('candig.html', session_id=flask.session["id_token"], datasetId=datasetId)
 
-@app.route('/info', methods=LOGIN_ENDPOINT_METHODS)
+@app.route('/info')
 @requires_session
 def index_info():
     response = flask.render_template('index.html',
@@ -1029,18 +1046,18 @@ def index_info():
     else:
         return response
 
-@app.route('/candig_patients', methods=LOGIN_ENDPOINT_METHODS)
+@app.route('/candig_patients')
 @requires_session
 def candig_patients():
     return flask.render_template('candig_patients.html', session_id=flask.session["id_token"])
 
-@app.route('/igv', methods=LOGIN_ENDPOINT_METHODS)
+@app.route('/igv')
 @requires_session
 def candig_igv():
     return flask.render_template('candig_igv.html', session_id=flask.session["id_token"],
                                  prepend_path=app.config.get('TYK_LISTEN_PATH', ''))
 
-@app.route('/gene_search', methods=LOGIN_ENDPOINT_METHODS)
+@app.route('/gene_search')
 @requires_session
 def candig_gene_search():
     return flask.render_template('gene_search.html', session_id=flask.session["id_token"])
@@ -1059,6 +1076,7 @@ def search_variant_by_gene_name():
 ### ======================================================================= ###
 
 # proxy to oidc login
+'''
 @app.route('/proxy')
 def proxy():
     """
@@ -1084,6 +1102,7 @@ def proxy():
     idp_path = app.config.get('KC_LOGIN_REDIRECT')+redirect_uri
 
     return flask.redirect('http://{0}{1}'.format(idp_serv,idp_path))
+'''
 
 
 @app.route('/logout_oidc', methods=LOGIN_ENDPOINT_METHODS)
@@ -1093,17 +1112,14 @@ def gateway_logout():
 
     :return: redirect to the gateway proxy page
     """
+    base_url = app.config['TYK_BASE_URL']
+    response = flask.redirect(base_url+'/login_oidc')
 
-    response = flask.redirect('/')
+    # delete browser cookie
+    response.set_cookie('session_id', '', expires=0, path=app.config.get('TYK_LISTEN_PATH', '/'), httponly=True)
 
-    try:
-        print("inside gateway logout")
-        _close_session()
-        response.delete_cookie('session_id')
-
-    except:
-        # TODO: redirect/handle
-        raise exceptions.NotAuthenticatedException()
+    # delete server/client sessions
+    _close_session()
 
     return response
 
@@ -1112,7 +1128,6 @@ def _close_session():
     helper method for terminating both a keycloak+flask session
 
     """
-    print("inside close session")
     url = oidc.client_secrets["logout_endpoint"]
     auth_bearer = 'Bearer ' + flask.session["access_token"]
 
@@ -1127,13 +1142,33 @@ def _close_session():
         'Content-Type': 'application/x-www-form-urlencoded',
     }
 
-    print("making close session request")
-
-    # TODO: The following post request triggers an exception, and is commented out for now.
-    #requests.post(url, data=payload, headers=headers)
+    requests.post(url, data=payload, headers=headers)
     flask.session.clear()
 
-    print("flask session cleared")
+def _check_session():
+    """
+    helper method for checking if keycloak+flask session still valid
+    :returns userInfo response object containing status code/token info
+
+    """
+
+    try:
+        introspectArgs = {
+            "token": flask.session["access_token"],
+            "client_id": oidc.client_secrets["client_id"],
+            "client_secret": oidc.client_secrets["client_secret"],
+            "refresh_token": flask.session["refresh_token"]
+        }
+
+        userInfo = requests.post(
+            url=oidc.client_secrets["token_introspection_uri"],
+            data=introspectArgs
+        )
+
+    except:
+        userInfo = None
+
+    return userInfo
 
 
 @DisplayedRoute('/token', postMethod=True)
@@ -1328,7 +1363,6 @@ def searchVariantAnnotations():
 @DisplayedRoute('/datasets/search', postMethod=True)
 @requires_auth
 def searchDatasets():
-    print("inside search dataset")
     return handleFlaskPostRequest(
         flask.request, app.backend.runSearchDatasets)
 
