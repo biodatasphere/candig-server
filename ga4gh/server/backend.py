@@ -203,17 +203,27 @@ class Backend(object):
         """
         dataset = self.getDataRepository().getDataset(request.dataset_id)
         results = []
-        for obj in dataset.getPatients():
-            include = True
-            if request.name:
-                if obj.getLocalId() not in request.name.split(','):
-#                if request.name != obj.getLocalId():
-                    include = False
 
-            if include:
+        requestedParam = list(json.loads(MessageToJson(request)).keys())
+        supportedParam = ["name", "patient_id", "province", "race", "gender", "causeOfDeath"]
+        commonParam = list(set(requestedParam).intersection(supportedParam))
+
+        # A list of searching paramaters that are currently supported by the back end, each should correspond to one objectAttr method.
+        for obj in dataset.getPatients():
+
+            objectAttr = {"name": obj.getLocalId(), "patient_id": obj.getPatientId(), "province": obj.getProvinceOfResidence(), "race": obj.getRace(), "gender": obj.getGender(), "causeOfDeath": obj.getCauseOfDeath()}
+            qualified = True
+
+            # search for object properties based on parameters present in the request
+            for param in commonParam:
+                if objectAttr[param] not in getattr(request, param).split(','):
+                    qualified = False
+                    break
+
+            if qualified == True:
                 results.append(obj)
         return self._objectListGenerator(request, results)
-
+        
     def enrollmentsGenerator(self, request):
         """
         """
