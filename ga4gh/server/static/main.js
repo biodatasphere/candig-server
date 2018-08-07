@@ -810,7 +810,7 @@ function readGroupFetcher(geneRequest, geneDataset) {
                 }
 
                 for (var j = 0; j < 1; j++) {
-                    let tempCurrData = JSON.parse(geneDataset[j]);
+                    let tempCurrData = geneDataset[j];
                     let tempChrId = tempCurrData['referenceName'];
 
                     if (tempChrId.includes('chr')) {
@@ -819,34 +819,13 @@ function readGroupFetcher(geneRequest, geneDataset) {
                         finalChrId = tempChrId;
                     }
 
-                    // if (parseInt(tempChrId) != NaN) {
-                    //     finalChrId = parseInt(tempChrId) 
-                    // }
-
-                    // else if (tempChrId == "X") {
-                    //     finalChrId = 23;
-                    // }
-
-                    // else if (tempChrId == "Y") {
-                    //     finalChrId = 24;
-                    // }
-
-                    // else if (tempChrId == "MT") {
-                    //     finalChrId = 25;
-                    // }
                     else {
                         let warningMsg = document.getElementById('warningMsg');
                         warningMsg.style.display = "block";
                         warningMsg.innerHTML += "We are sorry, but some parts of IGV may not work correctly.";
                     }
 
-                    console.log(finalChrId);
-                    console.log(typeof(finalChrId))
                 }
-
-                console.log(readGroupIds);
-                console.log(referenceSetIds);
-
 
                 // For now, only pass on the first element of the array
                 referenceIdFetcher(geneRequest, referenceSetIds[0], readGroupIds, readGroupSetId, finalChrId);
@@ -1019,7 +998,7 @@ function tableMaker(geneDataset) {
     var simplifiedObjArray = []
 
     for (var j = 0; j < geneDataset.length; j++) {
-        var tempCurrData = JSON.parse(geneDataset[j]);
+        var tempCurrData = geneDataset[j];
 
         var tempObj = {
             'referenceName': tempCurrData['referenceName'],
