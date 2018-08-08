@@ -1,6 +1,8 @@
+"use strict";
+
 /*Retrieve a list of datasets and initialize the page*/
 $(window).load(function() {
-    var xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
     xhr.open("POST", prepend_path + "/datasets/search", true);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.setRequestHeader('Accept', 'application/json');
@@ -9,8 +11,6 @@ $(window).load(function() {
     xhr.onload = function() {
 
         if (xhr.status != 200) {
-            //alert("It looks like we cannot connect to the server at the moment, please try again later.")
-            //$('warningMsg').html("It looks like we cannot connect to the server at the moment, please try again later.")
             let warningMsg = document.getElementById('warningMsg');
             warningMsg.style.display = "block";
             document.getElementById('tab-content').style.display = "none";
@@ -22,8 +22,8 @@ $(window).load(function() {
             if (listOfDatasetId.length == 0) {
                 $('warningMsg').html("Sorry, but it seems like no data is available at the moment..")
             } else {
-                finalDatasetName = [];
-                finalDatasetId = [];
+                let finalDatasetName = [];
+                let finalDatasetId = [];
                 let dropdown = document.getElementById("dropdown-menu");
 
                 for (let i = 0; i < listOfDatasetId.length; i++) {
@@ -65,18 +65,6 @@ $("a[href='#gene_search']").on('shown.bs.tab', function(e) {
         statusCode = 0;
     }
 
-    // if (document.getElementById('mytable').innerHTML != ""){
-    //       var table = $("#mytable").DataTable();
-    //       table.destroy();
-    //       document.getElementById("mytable").innerHTML = "";          
-    // }
-
-    // if (document.getElementById('patientTable').innerHTML != ""){
-    //       var table = $("#patientTable").DataTable();
-    //       table.destroy();
-    //       document.getElementById("patientTable").innerHTML = "";          
-    // }
-
 })
 
 /*
@@ -89,8 +77,6 @@ $("a[href='#candig']").on('shown.bs.tab', function(e) {
     var treatments;
     var objectDrugList = [];
     var drugList = Array(18).join(".").split("."); //Initialize an emptry string array that has 18 empty strings.
-
-    //var datasetId = '{{ datasetId }}';
 
     var xhr = new XMLHttpRequest();
     xhr.open("POST", prepend_path + "/treatments/search", true);
@@ -108,7 +94,6 @@ $("a[href='#candig']").on('shown.bs.tab', function(e) {
         var queryStatusSeriesArray = highChartSeriesObjectMaker(["Known Peers", "Queried Peers", "Successful Communications"], [knownPeers, queriedPeers, success]);
         singleLayerDrawer("queryStatus", 'bar', 'Server status', queryStatusSeriesArray);
 
-
         samplesFetcher();
 
         cancerTypeDruglistFetcher();
@@ -123,9 +108,7 @@ $("a[href='#candig']").on('shown.bs.tab', function(e) {
         var tempDataArray = [];
         for (var i = 0; i < nameArray.length; i++) {
             tempObj = {};
-            //tempDataArray = [];
             tempObj['name'] = nameArray[i];
-            //tempDataArray.push(dataArray[i]);
             tempObj['y'] = dataArray[i];
             seriesObjList.push(tempObj);
         }
@@ -133,7 +116,7 @@ $("a[href='#candig']").on('shown.bs.tab', function(e) {
     }
 
     function freqCounter(arrayToCount) {
-        result = {};
+        let result = {};
 
         for (var j = 0; j < arrayToCount.length; j++) {
             if (!result[arrayToCount[j]]) {
@@ -210,8 +193,9 @@ $("a[href='#candig']").on('shown.bs.tab', function(e) {
             }
 
             tempObj = freqCounter(tempArray);
-            var listOfHospitals = Object.keys(result);
-            var listOfHospitalNumber = Object.values(result);
+
+            var listOfHospitals = Object.keys(tempObj);
+            var listOfHospitalNumber = Object.values(tempObj);
 
             var tempIndex = listOfHospitals.indexOf("undefined");
             if (tempIndex !== -1) {
@@ -448,8 +432,6 @@ $("a[href='#candig']").on('shown.bs.tab', function(e) {
         });
         //Highcharts.setOptions(theme);
     }
-
-    //TODO: Get rid of function therapeuticTypeDrawer
 });
 
 
@@ -472,12 +454,6 @@ $("a[href='#candig_patients']").on('shown.bs.tab', function(e) {
             table.destroy();
             document.getElementById("patientTable").innerHTML = "";
         }
-
-        // if (document.getElementById('myTable').innerHTML != ""){
-        //       var table = $("#myTable").DataTable();
-        //       table.destroy();
-        //       document.getElementById("myTable").innerHTML = "";          
-        // }
 
 
         var listOfRace = [];
@@ -919,8 +895,6 @@ function igvSearch(variantsetId, geneRequest, referenceSetIds, readGroupIds, rea
         },
         oauthToken: session_id,
         showRuler: true,
-        // Insert your applications api key here,  or use OAuth
-        //apiKey: 'AIzaSyDUUAUFpQEN4mumeMNIRWXSiTh5cPtUAD0',
         tracks: [{
                 sourceType: "ga4gh",
                 type: "variant",
@@ -980,7 +954,7 @@ function igvSearch(variantsetId, geneRequest, referenceSetIds, readGroupIds, rea
         ]
     };
 
-    browser = igv.createBrowser(div, options);
+    let browser = igv.createBrowser(div, options);
 }
 
 
