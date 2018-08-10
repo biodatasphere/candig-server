@@ -711,6 +711,8 @@ function submit() {
 
     document.getElementById("loader").style.display = "block";
     document.getElementById("myTable").innerHTML = "";
+
+    document.getElementById("readGroupSelector").style.display = "none"
     var geneRequest = document.getElementById("request").value;
 
     var xhr = new XMLHttpRequest();
@@ -753,6 +755,8 @@ function freqCounter(arrayToCount) {
     return result;
 }
 
+let readGroupDict = {}
+
 function readGroupFetcher(geneRequest, geneDataset) {
     console.log("inside readgroup request")
     var xhr = new XMLHttpRequest();
@@ -771,18 +775,17 @@ function readGroupFetcher(geneRequest, geneDataset) {
         if (xhr.status == 200) {
             //console.log("xhr status okay")
             try {
-                //console.log("inside the try block")
                 let finalChrId;
                 let tempBody = data['results']["readGroupSets"]; //an array of readgroupsets
-                //let readGroups = tempBody["readGroupSets"][0]["readGroups"];
                 let readGroupSetId = [];
+                let readGroupSetName = []
 
-                //console.log("printing out the tempBody: " + readGroupSetId)
 
                 for (let i = 0; i < tempBody.length; i++) {
                     readGroupSetId.push(tempBody[i]["id"]);
                     readGroupIds.push(tempBody[i]["readGroups"][0]["id"]);
                     referenceSetIds.push(tempBody[i]["readGroups"][0]["referenceSetId"])
+                    readGroupSetName.push(tempBody[i]["name"])
                 }
 
                 for (var j = 0; j < 1; j++) {
@@ -803,10 +806,23 @@ function readGroupFetcher(geneRequest, geneDataset) {
 
                 }
 
-                // For now, only pass on the first element of the array
-                referenceIdFetcher(geneRequest, referenceSetIds[0], readGroupIds, readGroupSetId, finalChrId);
+                readGroupDict["geneRequest"] = geneRequest
+                readGroupDict["referenceSetIds"] = referenceSetIds[0]
+                readGroupDict["chromesomeId"] = finalChrId
+                readGroupDict["readGroupIds"] = readGroupIds
+                readGroupDict["readGroupSetId"] = readGroupSetId
+                readGroupDict["readGroupName"] = readGroupSetName
 
-                //igvSearch(geneRequest, readGroupSetId)
+                let selectRG1 = document.getElementById("firstRG");
+                let selectRG2 = document.getElementById("secondRG");
+
+                for (let i = 0; i < readGroupSetId.length; i++){
+                    selectRG1.options[selectRG1.options.length] = new Option(readGroupSetName[i], readGroupSetId[i])
+                    selectRG2.options[selectRG2.options.length] = new Option(readGroupSetName[i], readGroupSetId[i])
+                }
+
+                document.getElementById("readGroupSelector").style.display = "block"
+
             } catch (err) {
                 // do nothing
             }
@@ -818,7 +834,32 @@ function readGroupFetcher(geneRequest, geneDataset) {
     }
 }
 
-function referenceIdFetcher(geneRequest, referenceSetIds, readGroupIds, readGroupSetId, chromesomeId) {
+function rg_submit() {
+
+    try {
+        let firstRG = document.getElementById("firstRG").value
+        let secondRG = document.getElementById("secondRG").value
+
+        let firstRgReadGroupId = readGroupDict["readGroupIds"][readGroupDict["readGroupSetId"].indexOf(firstRG)]
+        let firstRgReadGroupName = readGroupDict["readGroupName"][readGroupDict["readGroupSetId"].indexOf(firstRG)]
+
+        let secondRgReadGroupId = readGroupDict["readGroupIds"][readGroupDict["readGroupSetId"].indexOf(secondRG)]
+        let secondRgReadGroupName = readGroupDict["readGroupName"][readGroupDict["readGroupSetId"].indexOf(secondRG)]
+
+        let firstRgObj = {"readGroupSetId": firstRG, "readGroupIds": firstRgReadGroupId, "name": firstRgReadGroupName}
+        let secondRgObj = {"readGroupSetId": secondRG, "readGroupIds": secondRgReadGroupId, "name": secondRgReadGroupName}
+
+
+        referenceIdFetcher(readGroupDict["geneRequest"], readGroupDict["referenceSetIds"], firstRgObj, secondRgObj, readGroupDict["chromesomeId"])
+    }
+
+    catch (err) {
+        console.log("we are having problems fetching info")
+    }
+
+}
+
+function referenceIdFetcher(geneRequest, referenceSetIds, firstRgObj, secondRgObj, chromesomeId) {
 
     console.log("inside reference id fetcher")
     var xhr = new XMLHttpRequest();
@@ -833,8 +874,6 @@ function referenceIdFetcher(geneRequest, referenceSetIds, readGroupIds, readGrou
         let data = JSON.parse(this.responseText);
         let referenceId = "";
 
-        //var readGroupSetIds = [];
-        //var referenceSetIds = [];
         if (xhr.status == 200) {
             try {
                 let referencesList = data['results']["references"];
@@ -847,7 +886,7 @@ function referenceIdFetcher(geneRequest, referenceSetIds, readGroupIds, readGrou
                 }
                 console.log("this is the reference id " + referenceId);
 
-                variantSetIdFetcher(geneRequest, referenceSetIds, readGroupIds, readGroupSetId, referenceId, chromesomeId);
+                variantSetIdFetcher(geneRequest, referenceSetIds, firstRgObj, secondRgObj, referenceId, chromesomeId);
             } catch (err) {
                 let warningMsg = document.getElementById('warningMsg');
                 warningMsg.style.display = "block";
@@ -861,7 +900,7 @@ function referenceIdFetcher(geneRequest, referenceSetIds, readGroupIds, readGrou
     }
 }
 
-function variantSetIdFetcher(geneRequest, referenceSetIds, readGroupIds, readGroupSetId, referenceId, chromesomeId) {
+function variantSetIdFetcher(geneRequest, referenceSetIds, firstRgObj, secondRgObj, referenceId, chromesomeId) {
     var xhr = new XMLHttpRequest();
     xhr.open("POST", prepend_path + "/variantsets/search", true);
     xhr.setRequestHeader('Content-Type', 'application/json');
@@ -876,13 +915,13 @@ function variantSetIdFetcher(geneRequest, referenceSetIds, readGroupIds, readGro
         if (data['results']["variantSets"][0]["id"] != undefined) {
             variantsetId = data['results']["variantSets"][0]["id"];
 
-            igvSearch(variantsetId, geneRequest, referenceSetIds, readGroupIds, readGroupSetId, referenceId, chromesomeId);
+            igvSearch(variantsetId, geneRequest, referenceSetIds, firstRgObj, secondRgObj, referenceId, chromesomeId);
         }
     }
 }
 
 
-function igvSearch(variantsetId, geneRequest, referenceSetIds, readGroupIds, readGroupSetId, referenceId, chromesomeId) {
+function igvSearch(variantsetId, geneRequest, referenceSetIds, firstRgObj, secondRgObj, referenceId, chromesomeId) {
     var div = document.getElementById('igvSample')
 
     var options = {
@@ -909,35 +948,20 @@ function igvSearch(variantsetId, geneRequest, referenceSetIds, readGroupIds, rea
                 sourceType: "ga4gh",
                 type: "alignment",
                 url: prepend_path + "",
-                //referenceSetId: "WyJHUkNoMzctbGl0ZSJd",
                 referenceId: referenceId,
-                //referenceName: chromesomeId,
-                readGroupIds: readGroupIds[0],
-                readGroupSetIds: readGroupSetId[0],
-                name: "Alignments 1"
+                readGroupIds: firstRgObj["readGroupIds"],
+                readGroupSetIds: firstRgObj["readGroupSetId"],
+                name: firstRgObj["name"]
             },
-            // {
-            //     sourceType: "ga4gh",
-            //     type: "alignment",
-            //     url: prepend_path + "",
-            //     //referenceSetId: "WyJHUkNoMzctbGl0ZSJd",
-            //     referenceId: referenceId,
-            //     //referenceName: chromesomeId,
-            //     readGroupIds: readGroupIds[1],
-            //     readGroupSetIds: readGroupSetId[1],
-            //     name: "Alignments 2"
-            // },
-            // {
-            //     sourceType: "ga4gh",
-            //     type: "alignment",
-            //     url: prepend_path + "",
-            //     //referenceSetId: "WyJHUkNoMzctbGl0ZSJd",
-            //     referenceId: referenceId,
-            //     //referenceName: chromesomeId,
-            //     readGroupIds: readGroupIds[2],
-            //     readGroupSetIds: readGroupSetId[2],
-            //     name: "Alignments 3"
-            // },
+            {
+                sourceType: "ga4gh",
+                type: "alignment",
+                url: prepend_path + "",
+                referenceId: referenceId,
+                readGroupIds: secondRgObj["readGroupIds"],
+                readGroupSetIds: secondRgObj["readGroupSetId"],
+                name: secondRgObj["name"]
+            },
             {
                 name: "Genes",
                 type: "annotation",
